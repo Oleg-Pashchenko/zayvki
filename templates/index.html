@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h3>Добавить сайт</h3>
+                <!-- Форма для добавления одного адреса сайта -->
+                <form method="POST" action="/add-site">
+                    <div class="form-group">
+                        <label for="siteUrl">Введите адрес сайта</label>
+                        <input type="url" class="form-control" id="siteUrl" name="siteUrl" placeholder="https://example.com" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2">Добавить сайт</button>
+                </form>
+            </div>
+
+            <div class="col-md-6">
+                <h3>Загрузить сайты через файл</h3>
+                <!-- Форма для загрузки файла с адресами сайтов -->
+                <form method="POST" action="/upload-file" enctype="multipart/form-data" id="uploadForm">
+                    <div class="form-group">
+                        <label for="file">Загрузите файл .txt</label>
+                        <div class="drop-zone mt-3" id="dropZone">
+                            <input type="file" class="form-control-file" id="file" name="file" accept=".txt" required hidden>
+                            <p>Перетащите файл сюда или <strong>выберите файл</strong></p>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2">Загрузить файл</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr>
+<div class="card mt-4">
+    <div class="card-body">
+        <h3>Сводка по статусам</h3>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card status-card mb-3">
+                    <div class="card-body">
+                        <div class="status-icon bg-warning"></div>
+                        <div class="status-text">
+                            <h5 class="card-title">В очереди на обработку</h5>
+                            <p class="card-text">{{ status_counts['В очереди на обработку'] }}</p>
+                            <a href="{{ url_for('download_status', status='В очереди на обработку') }}" class="btn btn-sm btn-primary">Скачать .txt</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card status-card mb-3">
+                    <div class="card-body">
+                        <div class="status-icon bg-success"></div>
+                        <div class="status-text">
+                            <h5 class="card-title">Форма найдена и сообщение отправлено</h5>
+                            <p class="card-text">{{ status_counts['Форма найдена и сообщение отправлено'] }}</p>
+                            <a href="{{ url_for('download_status', status='Форма найдена и сообщение отправлено') }}" class="btn btn-sm btn-primary">Скачать .txt</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card status-card mb-3">
+                    <div class="card-body">
+                        <div class="status-icon bg-danger"></div>
+                        <div class="status-text">
+                            <h5 class="card-title">Не удалось найти форму</h5>
+                            <p class="card-text">{{ status_counts['Не удалось найти форму'] }}</p>
+                            <a href="{{ url_for('download_status', status='Не удалось найти форму') }}" class="btn btn-sm btn-primary">Скачать .txt</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card status-card mb-3">
+                    <div class="card-body">
+                        <div class="status-icon bg-danger"></div>
+                        <div class="status-text">
+                            <h5 class="card-title">Форма найдена, не удалось отправить сообщение</h5>
+                            <p class="card-text">{{ status_counts['Форма найдена, не удалось отправить сообщение'] }}</p>
+                            <a href="{{ url_for('download_status', status='Форма найдена, не удалось отправить сообщение') }}" class="btn btn-sm btn-primary">Скачать .txt</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h3>Таблица сайтов</h3>
+        <div class="form-group">
+            <label for="statusFilter">Фильтр по статусу:</label>
+            <select class="form-control" id="statusFilter" onchange="filterTable()">
+                <option value="">Все</option>
+                <option value="В очереди на обработку" {% if filter == 'В очереди на обработку' %}selected{% endif %}>В очереди на обработку</option>
+                <option value="Форма найдена и сообщение отправлено" {% if filter == 'Форма найдена и сообщение отправлено' %}selected{% endif %}>Форма найдена и сообщение отправлено</option>
+                <option value="Не удалось найти форму" {% if filter == 'Не удалось найти форму' %}selected{% endif %}>Не удалось найти форму</option>
+                <option value="Форма найдена, не удалось отправить сообщение" {% if filter == 'Форма найдена, не удалось отправить сообщение' %}selected{% endif %}>Форма найдена, не удалось отправить сообщение</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="searchUrl">Поиск по ссылке:</label>
+            <input type="text" class="form-control" id="searchUrl" onkeyup="searchTable()" placeholder="Введите URL">
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered mt-3">
+                <thead>
+                    <tr>
+                        <th>Сайт</th>
+                        <th>Статус</th>
+                        <th>Дата обработки</th>
+                    </tr>
+                </thead>
+                <tbody id="sitesTable">
+                    {% for site in sites %}
+                    <tr class="status-{{ site.status }}">
+                        <td>{{ site.url }}</td>
+                        <td>{{ site.status }}</td>
+                        <td>{{ site.date_processed }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% for page_num in range(1, total_pages + 1) %}
+                <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ page_num }}{% if filter %}&filter={{ filter }}{% endif %}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var dropZone = document.getElementById('dropZone');
+    var fileInput = document.getElementById('file');
+    var uploadForm = document.getElementById('uploadForm');
+
+    dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', function () {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        fileInput.files = e.dataTransfer.files;
+    });
+
+    dropZone.addEventListener('click', function () {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files.length > 0) {
+            dropZone.querySelector('p').textContent = fileInput.files[0].name;
+        }
+    });
+
+    uploadForm.addEventListener('submit', function (e) {
+        if (fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Пожалуйста, выберите файл для загрузки.');
+        }
+    });
+});
+
+function filterTable() {
+    var filter = document.getElementById('statusFilter').value;
+    window.location.href = '?filter=' + filter;
+}
+
+function searchTable() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("searchUrl");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("sitesTable");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            txtValue = td.textContent || td.innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+</script>
+
+<style>
+.drop-zone {
+    border: 2px dashed #007bff;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+}
+.drop-zone.dragover {
+    background-color: #e9ecef;
+}
+.status-В.очереди.на.обработку td {
+    background-color: #fff3cd;
+}
+.status-Форма.найдена.и.сообщение.отправлено td {
+    background-color: #d4edda;
+}
+.status-Не.удалось.найти.форму td {
+    background-color: #f8d7da;
+}
+.status-Форма.найдена,.не.удалось.отправить.сообщение td {
+    background-color: #f8d7da;
+}
+.table-responsive {
+    overflow-x: auto;
+}
+.status-card {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-left: 15px; /* Добавляем отступ слева для карточки */
+}
+
+.status-icon {
+    width: 40px; /* Фиксированная ширина иконки */
+    height: 40px; /* Фиксированная высота иконки */
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0;
+    margin-right: 15px; /* Отступ справа от иконки */
+}
+
+.status-text {
+    flex-grow: 1;
+    min-width: 0; /* Добавлено, чтобы текст не выходил за границы */
+    display: flex;
+    flex-direction: column;
+}
+
+.card-title, .card-text {
+    margin-bottom: 0; /* Убираем нижний отступ */
+}
+
+.status-card .card-body {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Изменено, чтобы текст всегда был справа от иконки */
+}
+
+.vertical-divider {
+    height: 40px; /* Высота иконки */
+    border-left: 1px solid #ccc;
+    margin-right: 15px;
+}
+
+</style>
+{% endblock %}
