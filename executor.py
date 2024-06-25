@@ -26,6 +26,7 @@ class Site(db.Model):
 def process_tasks():
     with app.app_context():
         tasks = Site.query.filter_by(status='В очереди на обработку').all()
+        print(len(tasks))
         for task in tasks:
             print(task.url)
             task.status = kernel.execute(task.url)

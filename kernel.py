@@ -128,7 +128,8 @@ def execute(site: str):
                 return 'Форма найдена и сообщение отправлено'
             return 'Форма найдена, не удалось отправить сообщение'
         return 'Не удалось найти форму'
-    except:
+    except Exception as e:
+        print(e)
         return 'Не удалось найти форму'
 
 
