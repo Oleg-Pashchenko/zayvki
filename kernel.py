@@ -7,16 +7,11 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 import dotenv
 import dataclasses
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-
 dotenv.load_dotenv()
 
 api_token = os.getenv('API_TOKEN')
 client = OpenAI(api_key=api_token)
 
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
-driver.quit()
 
 @dataclasses.dataclass
 class SearchResult:
