@@ -6,5 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile_website
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile_scraper
+
     ports:
       - "3002:3002"
